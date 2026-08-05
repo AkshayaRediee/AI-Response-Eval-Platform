@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}New Evaluation — Eval Bench{% endblock %}
+{% block content %}
+<div class="eyebrow">Step 1 of 2</div>
+<h1>Ask a question</h1>
+<p class="lede">Send a prompt to the model, then grade what comes back against a 7-point rubric.</p>
+
+{% if demo_mode %}
+<div class="demo-banner">
+  ⚠ DEMO MODE — no OPENAI_API_KEY found in the environment. Responses are canned samples so you can
+  exercise the full grading + dashboard flow. Set OPENAI_API_KEY to call the real API.
+</div>
+{% endif %}
+
+<div class="panel">
+  <form action="{{ url_for('generate') }}" method="post">
+    <div class="field">
+      <label for="prompt_text">Prompt</label>
+      <textarea id="prompt_text" name="prompt_text" rows="4" placeholder="e.g. Explain how a load balancer distributes traffic." required></textarea>
+    </div>
+    <div class="field">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">Get response →</button>
+  </form>
+</div>
+{% endblock %}

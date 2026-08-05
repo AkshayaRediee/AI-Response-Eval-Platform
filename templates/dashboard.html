@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Eval Bench{% endblock %}
+{% block content %}
+<div class="eyebrow">Aggregate</div>
+<h1>Evaluation dashboard</h1>
+<p class="lede">Computed straight from SQL aggregates over every graded response. Export the CSV to drive the same view in Power BI.</p>
+
+{% set s = stats.summary %}
+{% if not s or s['total_evaluations'] == 0 %}
+<div class="panel">
+  <p>No evaluations yet. <a href="{{ url_for('index') }}" style="color:var(--amber);">Grade your first response →</a></p>
+</div>
+{% else %}
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">Avg quality score</div>
+    <div class="kpi-value">{{ s['avg_quality_score'] }} / 5</div>
+  </div>
+  <div class="kpi red-top">
+    <div class="kpi-label">Hallucination rate</div>
+    <div class="kpi-value">{{ s['hallucination_rate'] }}%</div>
+  </div>
+  <div class="kpi teal-top">
+    <div class="kpi-label">Total evaluations</div>
+    <div class="kpi-value">{{ s['total_evaluations'] }}</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Average score by rubric dimension</h3>
+  {% set dims = [('Accuracy', s['avg_accuracy']), ('Helpfulness', s['avg_helpfulness']), ('Safety', s['avg_safety']), ('Clarity', s['avg_clarity']), ('Completeness', s['avg_completeness']), ('Reasoning', s['avg_reasoning'])] %}
+  {% for name, val in dims %}
+  <div style="margin-bottom:12px;">
+    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+      <span>{{ name }}</span><span style="font-family:var(--mono); color:var(--teal);">{{ val }}</span>
+    </div>
+    <div class="metric-bar-track"><div class="metric-bar-fill" style="width: {{ (val / 5 * 100) if val else 0 }}%;"></div></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="rubric-grid">
+  <div class="panel">
+    <h3>Best-scoring prompts</h3>
+    <ul class="leaderboard">
+      {% for row in stats.best %}
+      <li>
+        <span class="rank">{{ loop.index }}</span>
+        <span class="lb-prompt trunc" title="{{ row['prompt_text'] }}">{{ row['prompt_text'] }}</span>
+        <span class="lb-score">{{ "%.1f"|format(row['overall_score']) }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="panel">
+    <h3>Worst-scoring prompts</h3>
+    <ul class="leaderboard">
+      {% for row in stats.worst %}
+      <li>
+        <span class="rank">{{ loop.index }}</span>
+        <span class="lb-prompt trunc" title="{{ row['prompt_text'] }}">{{ row['prompt_text'] }}</span>
+        <span class="lb-score" style="color:var(--red);">{{ "%.1f"|format(row['overall_score']) }}</span>
+        {% if row['hallucination_detected'] %}<span class="stamp stamp-flagged">flag</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>By category</h3>
+  <table>
+    <thead><tr><th>Category</th><th># evals</th><th>Avg score</th><th>Hallucination rate</th></tr></thead>
+    <tbody>
+      {% for row in stats.by_category %}
+      <tr>
+        <td>{{ row['category'] }}</td>
+        <td>{{ row['n'] }}</td>
+        <td style="font-family:var(--mono); color:var(--amber);">{{ row['avg_score'] }}</td>
+        <td style="font-family:var(--mono);">{{ row['hallucination_rate'] }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <h3>Quality trend over time</h3>
+  <canvas id="trendChart" height="90"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+const trend = {{ stats.trend | tojson }};
+const ctx = document.getElementById('trendChart');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: trend.map(r => r.day),
+    datasets: [{
+      label: 'Avg overall score',
+      data: trend.map(r => r.avg_score),
+      borderColor: '#D9A441',
+      backgroundColor: 'rgba(217,164,65,0.15)',
+      tension: 0.25,
+      fill: true,
+      pointRadius: 3,
+    }]
+  },
+  options: {
+    scales: {
+      y: { min: 1, max: 5, ticks: { color: '#9AA0AC' }, grid: { color: '#383E49' } },
+      x: { ticks: { color: '#9AA0AC' }, grid: { color: '#383E49' } }
+    },
+    plugins: { legend: { labels: { color: '#E8E6E1' } } }
+  }
+});
+</script>
+
+{% endif %}
+{% endblock %}

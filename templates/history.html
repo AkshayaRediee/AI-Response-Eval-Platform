@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}History — Eval Bench{% endblock %}
+{% block content %}
+<div class="eyebrow">Log</div>
+<h1>All evaluations</h1>
+<p class="lede">{{ rows|length }} graded response{{ 's' if rows|length != 1 }}.</p>
+
+<div class="panel">
+<table>
+  <thead>
+    <tr>
+      <th>When</th><th>Prompt</th><th>Category</th>
+      {% for m in metrics %}<th>{{ m[:3]|capitalize }}</th>{% endfor %}
+      <th>Overall</th><th>Flag</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td style="font-family:var(--mono); font-size:12px; color:var(--muted);">{{ r['created_at'] }}</td>
+      <td class="trunc" title="{{ r['prompt_text'] }}">{{ r['prompt_text'] }}</td>
+      <td>{{ r['category'] or '—' }}</td>
+      {% for m in metrics %}<td style="font-family:var(--mono);">{{ r[m] }}</td>{% endfor %}
+      <td style="font-family:var(--mono); font-weight:600; color:var(--amber);">{{ "%.1f"|format(r['overall_score']) }}</td>
+      <td>
+        {% if r['hallucination_detected'] %}
+          <span class="stamp stamp-flagged">flagged</span>
+        {% elif r['overall_score'] >= 4 %}
+          <span class="stamp stamp-pass">pass</span>
+        {% else %}
+          <span class="stamp stamp-review">review</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="{{ 4 + metrics|length }}">No evaluations logged yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
